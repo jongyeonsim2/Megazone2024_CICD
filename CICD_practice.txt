@@ -98,7 +98,7 @@ jobs:
             git pull origin main         # 변경사항을 pull
             ./gradlew clean build        # build
             sudo fuser -k -n tcp 8080 || true  # 기존에 실행되고 있는 앱 종료. 실행되는 앱이 없더라도 true 로 처리.
-            nohup java -jar build/libs/*SNAPSHOT.jar > ./output.log & # 앱 실행 및 로그 파일로 저장
+            nohup java -jar build/libs/*SNAPSHOT.jar > ./output.log 2>&1 &    # 앱 실행 및 로그 파일로 저장
 
 
 
