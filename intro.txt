@@ -1,0 +1,81 @@
+
+CI/CD
+
+GitHub Actions 설명서
+https://docs.github.com/ko/actions
+
+1. 개념
+   테스트(Test), 통합(Merge), 배포(Deploy)의 과정을 자동화 하는 것.
+
+   CI : continuous integration
+   CD : continuous deploy
+
+   코드의 수정이 일어날 때마다 반복하기란 너문 귀찮은 일임.
+   그래서, 이런 반복적인 과정을 자동화시키기 위해 CI/CD 인프라를 구축하는 것임.
+
+
+
+2. CI/CD 구축시 사용할 Github Actions
+
+   사용할 수 있는 툴
+   Github Actions, Jenkins, Circle CI, TraviS CI 등등
+
+   이중에서 현업에서도 많이 사용하면서, 무료로 사용할 있고,
+   빌드용 서버가 필요없는 Github Actions 활용하는 경우가 많음.
+
+   Jenkins 도 많이 사용하지만, 단점으로 별도의 서버를 구축을 해야 함.
+   서버를 구축한다는 것은 대여하게 됨으로 비용이 발생하게 됨.
+
+   Github Actions 은 별도의 서버 구축 없이 Github 에 내장되어 있는
+   Github Actions 기능을 사용할 수 있음.
+
+   비용측면에서도 유리하고, 서버 설정에 드는 시간도 유리함.
+
+3. CI/CD 흐름
+   Github Actions은 로직을 실행시킬 수 있는 일종의 컴퓨터라고 생각하면 됨.
+   CI/CD 과정에서 Github Actions은 "빌드, 테스트, 배포"에 대한
+   로직을 실행시키는 역할을 하게 됨.
+
+   - 코드 작성 후 commit
+   - Github에 push
+   - Push 라는 이벤트를 감지해서 Github Actions 에 작성한 로직이 실행
+     a.  빌드
+     b.  테스트
+     c.  서버로 배포
+   - 서버에 배포된 최신 코드로 서버를 재실행.
+
+4. 첫 번째 GithubAction 작동
+   - Github
+     https://github.com/jongyeonsim2/github-actions-basic
+
+   - 새로운 폴더 생성
+     .github/workflows/deploy.yml
+
+   - Github Actions 에서 시행될 로직을 작성.
+     deploy.yml
+
+   - git repository upload
+
+   - 용어
+     Workflow
+        : 하나의 yaml 파일을 하나의 Workflow 라고 부름.
+
+     Event
+        : Workflow 가 실행되는 시점을 설정.
+        예) main 브랜치에 push 될 때 해당 Workflow 를 실행.
+
+     Job
+        : 하나의 Workflow 는 1개 이상의 Job 으로 구성되고
+        여러 Job은 기본적으로 병렬적으로 수행.
+        그리고, Job 은 여러 Step 들로 구성이 됨.
+
+     Step
+        : 특정 작업을 수행하는 가장 작은 단위.
+
+   - 전체 흐름
+       Enent 가 발생했을 때, 해당 Workflow 를 실행시키고,
+       Workflow 는 여러 개의 Job 들로 이루어져 있는데,
+       또, Job 은 여러 개의 Step 들로 구성되어 있고,
+       Step 이 순차적으로 위에서 아래로 실행되는 구조임.
+
+
