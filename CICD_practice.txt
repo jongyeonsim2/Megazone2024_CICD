@@ -100,6 +100,38 @@ jobs:
             sudo fuser -k -n tcp 8080 || true  # 기존에 실행되고 있는 앱 종료. 실행되는 앱이 없더라도 true 로 처리.
             nohup java -jar build/libs/*SNAPSHOT.jar > ./output.log & # 앱 실행 및 로그 파일로 저장
 
+2. 실습 3 - application.properties, application.yml 파일 제외 push
+           애플리케이션이 실행시 필요함으로 GithubAction event 발생시
+           만들어서 배포가 되도록 해야 함.
+
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH로 EC2에 접속하기
+        uses: appleboy/ssh-action@v1.0.3      #SSH 라이브러리
+        env:
+          APPLICATION_PROPERTIES: ${{secrets.APPLICATION_PROPERTIES}}
+        with:
+          host: ${{secrets.EC2_HOST}}         #EC2 의 주소
+          username: ${{secrets.EC2_USERNAME}} #EC2 접속 유저
+          key: ${{secrets.EC2_PRIVATE_KEY}}   #EC2 접속 key 파일 내용
+          envs: APPLICATION_PROPERTIES
+          script_stop: true # 아래의 실행 script 중 실패하는 명령이 하나라도 있으면 실패로 처리
+          script: |
+            cd /home/ubuntu/cicd-server2 # 수정된 내용을 pull 하기 위해 프로젝트 폴더로 이동
+            git pull origin main         # 변경사항을 pull
+            echo "$APPLICATION_PROPERTIES" > src/main/resources/application.yml
+            ./gradlew clean build        # build
+            sudo fuser -k -n tcp 8080 || true  # 기존에 실행되고 있는 앱 종료. 실행되는 앱이 없더라도 true 로 처리.
+            nohup java -jar build/libs/*SNAPSHOT.jar > ./output.log 2>&1 & # 앱 실행 및 로그 파일로 저장
 
 
 
