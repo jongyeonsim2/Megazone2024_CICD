@@ -39,10 +39,37 @@
    - spring boot app 실행
      cd ./build/libs
      nohup java -jar cicd-server-0.0.1-SNAPSHOT.jar &
+          nohup 으로 실행시 해당 폴더에 log  파일이 생성됨.
+     
+
    - 브라우저에서 spring boot app 접속
      http://54.180.97.183:8080/
 
      54.180.97.183 는 터미널 윈도우에서 PublicIPs: 54.180.97.183 로 확인.
+
+   - 배포할 때 때마다 git 계정과 token 을 입력해야 하는 불편함이 있어,
+     입력하지 않아도 되도록 설정
+     git config --global credential.helper store
+     git pull origin main
+     => github 계정과 token 입력
+
+     git pull origin main
+     => github 계정과 token 입력하지 않아도 됨.
+     
+     github 계정과 token 정보가 아래의 파일에 저장되어 있어,
+     보안에 좋지 않음.(CICD 방법 1의 단점)
+     cat /home/ubuntu/.git-credentials
+
+   - build 후 재배포
+     
+        - 8080 port 에서 실행중인 app 종료
+          sudo lsof -i:8080          // 8080 으로 실행중인 앱 확인
+          sudo fuser -k -n tcp 8080  // 8080 으로 실행중인 앱 종료
+
+        - ./gradlew clean build
+
+        - java -jar cicd-server-0.0.1-SNAPSHOT.jar
+
 
 ######################## 방법2 : back end (GithubAction, SCP) ########################
 
