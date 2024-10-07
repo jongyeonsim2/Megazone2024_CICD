@@ -169,6 +169,81 @@ jobs:
      d. 기능을 추가하거나 수정할 때 많은 시간이 들어감.
      e. 금전적인 비용이 더 많이 발생할 수 있음.
 
+6. 실습
+   - EC2에서 spring boot app 종료
+     sudo lsof -i:8080
+     sudo kill PID
+     sudo lsof -i:8080
+
+   - 기존 spring boot 프로젝트 폴더 삭제
+     rm -rf cicd-server2
+
+   - GithubAction workflow(deploy.yml) 작성
+
+name: Deploy To EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Github Repository 파일 불러오기
+        uses: actions/checkout@v4
+
+      - name: JDK17 설치
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: application.yml 파일 만들기
+        run: echo "${{ secrets.APPLICATION_PROPERTIES }}" > ./src/main/resources/application.yml
+
+      - name: 테스트 및 빌드하기
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean build
+
+      - name: 빌드된 파일 이름 변경하기
+        run: mv ./build/libs/*SNAPSHOT.jar ./project.jar
+
+      - name: SCP로 EC2에 빌드된 파일 전송하기
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          source: project.jar
+          target: /home/ubuntu/cicd-server2/tobe
+
+      - name: SSH로 EC2에 접속하기
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }} # EC2의 주소
+          username: ${{ secrets.EC2_USERNAME }} # EC2 접속 username
+          key: ${{ secrets.EC2_PRIVATE_KEY }} # EC2의 Key 파일의 내부 텍스트
+          script_stop: true # 아래 script 중 실패하는 명령이 하나라도 있으면 실패로 처리
+          script: |
+            rm -rf /home/ubuntu/cicd-server2/current
+            mkdir /home/ubuntu/cicd-server2/current
+            mv /home/ubuntu/cicd-server2/tobe/project.jar /home/ubuntu/cicd-server2/current/project.jar
+            cd /home/ubuntu/cide-server2/current
+            sudo fuser -k -n tcp 8080 || true
+            nohup java -jar project.jar > ./output.log 2>&1 &
+            rm -rf /home/ubuntu/cicd-server2/tobe
+
+   - AppController 수정
+     브라우저에 출력할 내용 변경
+
+   - GithubAction 진행 상태 확인
+   - EC2 서버에 접속해서 build 파일 전송 확인
+   - 브라우저로 spring boot 앱에 접속
+     
+
 ######################## 방법3 : back end  ########################
 
 1. 용도
@@ -179,6 +254,39 @@ jobs:
                                              -> AWS CodeDeploy
    AWS CodeDeploy : EC2 한테 S3 로부터 빌드 파일을 다운받은 뒤 배포를
                     진행하도록 명령   
+
+   AWS CodeDeploy, AWS CodeDeploy Agent( EC2 )
+
+   - GithubAction 은 S3 에 접근할 수 있어야 함. ( 외부에서 AWS 서비스 사용 )
+   - GithubAction 은 CodeDeploy 에 접근할 수 있어야 함. ( 외부에서 AWS 서비스 사용 )
+   - EC2 는 S3 에 접근할 수 있어야 함. ( AWS 내부에서 AWS 서비스 사용 )
+   - CodeDeploy 는 EC2 에 접근할 수 있어야 함. ( AWS 내부에서 AWS 서비스 사용 )
+     EC2 한테 S3 에 접속을 해서 build 된 파일을 다운로드 한 뒤
+     배포를 진행하도록 명령하기 위함. 이 명령은 CodeDeploy Agent 가 처리함.
+
+   상기의 접속 관계를 이해를 하고, IAM 설정이 필요함.
+
+   2.1 CodeDeploy 의 권한 설정
+       EC2 에 접근하기 위함.
+
+   2.2 EC2 역할 생성
+       EC2 가 S3에 접근하기 위함.
+
+       - 정책생성
+       - 역할생성
+       - EC2 Instance 에 생성한 역할을 장착.
+
+   2.3 EC2 에 Code Deploy Agent 설치
+
+cd ~
+
+sudo apt update && 
+sudo apt install -y ruby-full wget && 
+cd /home/ubuntu && 
+wget https://aws-codedeploy-ap-northeast-2.s3.ap-northeast-2.amazonaws.com/latest/install && 
+chmod +x ./install && 
+sudo ./install auto
+
 
 3. 사용하는 이유(오버엔지니어링이 아닌 경우)
    - CodeDeploy 는 수많은 AWS EC2 에 배포를 쉽게 할 수 있도록 도와줌.
@@ -197,6 +305,20 @@ jobs:
 6. 언제 사용하면 좋은지
    - 서버를 여러 대 이상 구동해야 하거나 무중단 배포가 중요한 서비스일 때
      주로 활용함.
+
+7. AWS IAM 과 AWS 서비스 사용시 관계 설정
+   
+   7.1 정책, 역할(권한, role), 사용자 관계
+       사용자는 역할이 있어야 하고,
+       역할은 정책이 있어야 함.
+
+   7.2 AWS 로그인 한 상태에서 AWS 서비스를 사용하는 경우.
+       - AWS 내부에서 AWS 서비스를 사용
+       - 다른 AWS 서비스를 사용할 경우, 역할을 생성해서, 역할을 내한테 등록해서 사용.
+       
+   7.3 AWS 와 무관한 서비스, 앱 등에서 AWS 서비스를 사용하는 경우.
+       - AWS 외부에서 AWS 서비스를 사용
+       - AWS 에 사용자를 생성 후 생성된 사용자를 통해서 AWS 서비스를 사용.
 
 ######################## 방법4 : back end (Github Actions, Docker) ########################
 
