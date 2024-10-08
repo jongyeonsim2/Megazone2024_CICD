@@ -690,6 +690,17 @@ COPY ./build/libs/*SNAPSHOT.jar project.jar
 ENTRYPOINT ["java", "-jar", "project.jar"]
 
 
+   6.9 docker container 실행 확인
+       - ECR repository 에서 push 된 docker image 확인
+       - EC2 에서 pull 된 docker image 확인
+
+         docker image ls
+
+         EC2 에서 실행중 docker container 확인
+         
+         docker container ls
+
+       - 웹 브라우저에서 spring boot app 접속
 
 ######################## 방법5 : back end (Github Actions, Docker, CodeDeploy) ########################
 
