@@ -597,7 +597,15 @@ ENTRYPOINT ["java", "-jar", "project.jar"]
 
        EC2 가 ECR 에 접근할 수 있는 권한이 생김.
 
-   6.8 Spring Boot 프로젝트에서 deploy.yml 수정
+   6.8 Spring Boot 프로젝트에서 Dockerfile 작성, deploy.yml 수정
+
+
+============================= Dockerfile =============================
+FROM eclipse-temurin:17-jdk-alpine
+COPY ./build/libs/*SNAPSHOT.jar project.jar
+# image를 컨테이너화 시킬 때, spring boot app 실행시키도록 함.
+ENTRYPOINT ["java", "-jar", "project.jar"]
+
 
 ============================= deploy.yml =============================
 name: Deploy To EC2
@@ -683,11 +691,7 @@ jobs:
             docker pull ${{ steps.login-ecr.outputs.registry }}/cicd-server2:latest
             docker run -d --name cicd-server2 -p 8080:8080 ${{ steps.login-ecr.outputs.registry }}/cicd-server2:latest
 
-============================= Dockerfile =============================
-FROM eclipse-temurin:17-jdk-alpine
-COPY ./build/libs/*SNAPSHOT.jar project.jar
-# image를 컨테이너화 시킬 때, spring boot app 실행시키도록 함.
-ENTRYPOINT ["java", "-jar", "project.jar"]
+
 
 
    6.9 docker container 실행 확인
