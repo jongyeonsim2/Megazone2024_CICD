@@ -716,10 +716,9 @@ jobs:
                                              -> AWS S3
                                              -> AWS CodeDeploy -> AWS EC2 
 
-   빌드 파일 : Docker Image 생성 및 Docker Image 를 ECR 로 전달
-   GithubAction 이벤트 감지 -> AWS CodeDeploy -> AWS EC2 :
-             EC2 한테 S3 로부터 CodeDeploy 관련 파일을 다운받은 뒤
-             AWS ECR 로 부터 Docker Image 다운 후 배포
+    AWS S3 에는 CodeDeploy Agent 가 사용할 파일이 저장.
+    AWS CodeDeploy 에서는 AWS EC2 의 AWS CodeDeploy Agent 를 통해서
+    ECR docker image 를 EC2 pull 해서, container 로 실행.
 
 3. 장점
    - 컨테이너 기반의 서버가 여러 대이더라도 쉽게 자동 배포를 구축할 수 있음.
