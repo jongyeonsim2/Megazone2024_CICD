@@ -466,6 +466,16 @@ echo "-------------------- 서버 배포 종료 --------------------"
    GithubAction 이벤트 감지 -> AWS EC2 :
              ECR 로부터 Docker Image 를 다운받아서 배포를 진행하도록 명령
 
+   - GithubAction -> AWS ECR 에 접근 권한이 필요.
+     외부에서 AWS 내부의 service 사용 : IAM user 를 사용.
+                                      IAM user 에 정책을 추가.
+
+   - AWS EC2 -> AWS ECR 에 접근 권이 필요.
+     AWS ECR 을 private 로 생성. 아무나 접근할 수 없게 됨.
+     Amazon ECR Docker Credential Helper 를 EC2 에 설치
+     EC2 가 AWS ECR 에 접근하기 위한 권한(정책) 을 추가.
+
+
 3. 장점
    - Docker 기반으로 서비스를 운영할 때, 가장 간단하게 구성할 수 있는
      인프라 구조임.
@@ -505,6 +515,71 @@ sudo usermod -aG docker ubuntu &&
 sudo curl -L "https://github.com/docker/compose/releases/download/1.23.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && 
 sudo chmod +x /usr/local/bin/docker-compose && 
 sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+
+       - 설치 상태 확인
+         docker -v //docker 버전 확인
+         docker compose version  // docker compose 버전 확인
+         systemctl status docker  // Docker 정상 실행 확인, Active: active (running) 확인
+
+   6.3 Github Actions 에 IAM 권한 추가. ( ECR에 접속해서 image 를 push 하기 위해서 )
+       - IAM 접속
+       - 기존 사용자 cicd-server-github-actions2 를 선택
+       - "권한 추가" 선택
+       - 권한 옵션에서 "직접 정책 연결" 선택
+       - 정책 검색을 "containerregistry" 로 검색.
+       - "AmazonEC2ContainerRegistryFullAccess" 를 체크하고, 다음 선택
+       - "권한 추가" 선택
+       
+       Github Actions 이 AWS ECR 에 접근할 수 있는 권한이 생김.
+
+   6.4 ECR(Elastic Container Registry) 생성
+       나만의 AWS 상에 Docker hub 를 만들었다고 생각하면 됨.
+
+       - ECR  접속
+       - "생성" 선택
+       - 리포지토리 이름 : cicd-server2
+       - 기본 설정 그대로 하고, "생성" 선택
+
+       private ECR 이 생성됨.
+
+
+   6.5 Spring boot 프로젝트에서 Docker file 작성.
+
+FROM eclipse-temurin:17-jdk-alpine
+COPY ./build/libs/*SNAPSHOT.jar project.jar
+# image를 컨테이너화 시킬 때, spring boot app 실행시키도록 함.
+ENTRYPOINT ["java", "-jar", "project.jar"]
+
+
+   6.6 EC2 가 private ECR 에 접근할 수 있게 설정
+       현재 만들어진 ECR 은 private 임으로 아무나 접근할 수 없음.
+
+       Amazon ECR Docker Credential Helper 설치
+
+       - EC2 instance 터미널 접속
+       - 명령어 입력 및 실행
+         cd ~
+         sudo apt update
+         sudo apt install amazon-ecr-credential-helper
+
+       Configuration 설정하기
+         
+       - EC2 instance 터미널 접속
+       - 명령어 입력 및 실행
+
+       cd ~
+       mkdir .docker
+       cd .docker
+
+       vi config.json
+
+       {
+        "credsStore": "ecr-login"
+       }
+         
+       cat config.json
+
 
 ######################## 방법5 : back end (Github Actions, Docker, CodeDeploy) ########################
 
