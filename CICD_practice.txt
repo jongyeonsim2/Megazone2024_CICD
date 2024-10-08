@@ -480,6 +480,32 @@ echo "-------------------- 서버 배포 종료 --------------------"
    - 서버를 여러 대 운영하고 있지 않을 정도의 소규모 프로젝트일 때 주로
      활용함.
 
+6. 실습
+   6.1 기존 배포 된 app 삭제
+       - spring boot 애플리케이션 종료
+          lsof -i:8080
+          kill PID
+          lsof -i:8080
+       - 사용했던 spring boot 프로젝트 폴더 삭제
+          ls
+          rm -rf cicd-server
+          ls
+
+   6.2 EC2 에 Docker 설치
+       - Ubuntu 에 Docker, Docekr Compose 설치
+         
+sudo apt-get update && 
+sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common && 
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - && 
+sudo apt-key fingerprint 0EBFCD88 && 
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" && 
+sudo apt-get update && 
+sudo apt-get install -y docker-ce && 
+sudo usermod -aG docker ubuntu && 
+sudo curl -L "https://github.com/docker/compose/releases/download/1.23.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && 
+sudo chmod +x /usr/local/bin/docker-compose && 
+sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+
 ######################## 방법5 : back end (Github Actions, Docker, CodeDeploy) ########################
 
 1. 용도
