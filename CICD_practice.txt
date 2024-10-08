@@ -580,6 +580,116 @@ ENTRYPOINT ["java", "-jar", "project.jar"]
          
        cat config.json
 
+       - github.com/awslabs
+       - https://docs.aws.amazon.com/ko_kr/AmazonECR/latest/userguide/registry_auth.html
+
+
+   6.7 EC2 가 ECR 에 접근할 수 있는 권한 설정
+       EC2 가 ECR 에서 docker image 를 pull 하기 위함.
+
+       - IAM 접속
+       - 기존의 역할 수정해서 사용.
+         code-deploy-ec2-role2
+       - 권한 정책에서 "권한 추가" > "정책 연결" 선택
+       - "ec2containerRegistry" 로 정책 검색
+       - "AmazonEC2ContainerRegistryFullAccess" 를 체크하고 
+         "권한 추가" 선택
+
+       EC2 가 ECR 에 접근할 수 있는 권한이 생김.
+
+   6.8 Spring Boot 프로젝트에서 deploy.yml 수정
+
+============================= deploy.yml =============================
+name: Deploy To EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Github Repository 파일 불러오기
+        uses: actions/checkout@v4
+
+      - name: JDK17 설치
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: application.yml 파일 만들기
+        run: echo "${{ secrets.APPLICATION_PROPERTIES }}" > ./src/main/resources/application.yml
+
+      - name: 테스트 및 빌드하기
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean build
+
+      - name: Test
+        run: |
+             ls
+             pwd
+
+      - name: AWS Resource 에 접근할 수 있게 AWS credentials 설정
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-northeast-2
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: ECR에 로그인하기
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ECR에 성공적으로 로그인이 되면, 반환되는 값을
+      # docker image 파일명으로 사용하기 위해
+      # 반환된 값이 있는지 확인하기 위해 출력함.
+      - name: ECR에 로그인 한 결과 확인
+        run: echo ${{ steps.login-ecr.outputs.registry }}
+
+      # Dockerfile 을 참조해서 docker image 생성
+      - name: Docker 이미지 생성
+        run: docker build -t cicd-server2 .
+
+      # 디버깅 용도. docker 이미지 생성 확인.
+      - name: Docker 이미지 생성 확인
+        run: |
+          ls
+          pwd
+
+      # ECR 의 URI 를 이용해서 docker image tag 를 만듬
+      # steps.login-ecr.outputs.registry = ECR 의 URI
+      # 423623841859.dkr.ecr.ap-northeast-2.amazonaws.com
+      - name: Docker 이미지에 Tag 붙이기
+        run: docker tag cicd-server2 ${{ steps.login-ecr.outputs.registry }}/cicd-server2:latest
+
+      - name: ECR 에 docker image Push 하기
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/cicd-server2:latest
+
+      - name: SSH로 EC2에 접속하기
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }} # EC2의 주소
+          username: ${{ secrets.EC2_USERNAME }} # EC2 접속 username
+          key: ${{ secrets.EC2_PRIVATE_KEY }} # EC2의 Key 파일의 내부 텍스트
+          script_stop: true
+          script: |
+            docker stop cicd-server2 || true
+            docker rm cicd-server2 || true
+            sudo fuser -k -n tcp 8080 || true
+            docker pull ${{ steps.login-ecr.outputs.registry }}/cicd-server2:latest
+            docker run -d --name cicd-server2 -p 8080:8080 ${{ steps.login-ecr.outputs.registry }}/cicd-server2:latest
+
+============================= Dockerfile =============================
+FROM eclipse-temurin:17-jdk-alpine
+COPY ./build/libs/*SNAPSHOT.jar project.jar
+# image를 컨테이너화 시킬 때, spring boot app 실행시키도록 함.
+ENTRYPOINT ["java", "-jar", "project.jar"]
+
+
 
 ######################## 방법5 : back end (Github Actions, Docker, CodeDeploy) ########################
 
