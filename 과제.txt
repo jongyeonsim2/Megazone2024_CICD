@@ -1,0 +1,108 @@
+
+
+1. 목적
+   현재까지의 CI/CD 실습은 push evenvt 에 대한 CI/CD 파이프라인 인프라를
+   만드는 것임.
+
+   어떻게 보면, 현실에 맞지 않을 수도 있음.
+
+   개발을 할 때 간단하게 하더라도, main branch 와 dev branch 를 구분하고,
+   dev branch 에서도 feature branch 를 만들어서 개발 팀원들이 작업을 한 후
+   PR(Pull Request) -> PR Confirm 함. 
+
+   그리고, 최종적으로 feature branch 를 dev branch 에 merge 를 하게 됨.
+
+2. CI/CD 파이프라인 고도화 흐름
+   main branch
+      - dev branch 
+         - feature-cicd1-AWS1 생성
+
+   feature-cicd1-AWS1 : 
+      
+      수정 -> commit and changes -> compare & pull request -> create pull request -> PR open (commit1)
+                  ======> test 
+      수정 -> commit and changes -> 기존 PR 에 반영 (commit2)
+                  ======> test
+
+   feature-cicd1-AWS1 : Merge pull request -> confirm merge -> Merged -> PR closed (dev branch 로 merge)
+                  ======> build -> deploy
+
+3. CI/CD 파이프라인 고도화 기준
+  3.1 고도화 적용 프로젝트
+     - 기존의 cicd-server spring boot 프로젝트에 적용.
+
+  3.2 event trigger 기준
+     - workflows 는 PR(pull request) 에 대해서 event trigger 되도록 함.
+      따라서, PR 에 대한 acton type 을 지정할 필요가 있음.
+     - main, dev, feature branch 중에서 dev branch 의 PR에 대해서만 event trigger 되도록 함.
+     - cicd-server 프로젝트의 src 경로에 대해서만 event trigger 되도록 함.
+
+  3.3 job 구성과 실행 기준
+     - jobs 을 test, image-build, image-deploy 로 구성.
+
+     - test job 이 실행되는 조건
+       github event action 이 PR opened 이거나 synchronize 인 경우에만 실행
+       따라서, test job 의 실행은 build, deploy job 에 영향을 주지 않고
+       독자적으로 실행이 되어야 함.
+
+     - image-build job 이 실행되는 조건
+       실행되는 조건은 feature branch 가 dev branch 로 merge 가 되는 경우에만 실행
+
+     - image-deploy job 이 실행되는 조건
+       build job 이 먼저 실행이 되고 종료된 후에 실행
+
+  3.4 추가 요구 사항
+     - image-deploy job
+       GithubAction 에서 AWS 의 리소스를 사용해야 하는 경우는 OIDC(OpenID Connect) 를 설정해서
+       AWS 의 리소스를 사용. OIDC 를 사용하면 권한만 부여해서 사용할 수 있게 됨.
+
+     - deploy 결과에 대한 slack 알림 설정
+       image-deploy job에 포함된 step 으로 설정.
+       deploy step 에 대한 성공 및 실패 모두에 대해서 slack 알림이 되도록 설정.
+
+4. 참고 문서
+  - Github Docs : 워크플로를 트리거하는 이벤트 > pull request
+    https://docs.github.com/ko/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows
+
+  - Github Marketplace : "Configure AWS Credentials" Action for GitHub Actions
+    OIDC
+    https://github.com/marketplace/actions/configure-aws-credentials-action-for-github-actions
+
+  - Configuring IAM to trust GitHub
+    https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services
+
+  - slack api
+    https://api.slack.com/messaging/webhooks
+
+5. 과제 제출
+
+   아래의 내용을 참고하여, 제출
+
+     메일 주소 :   diversim90@naver.com
+     제목 :       [메가존클라우드] CI/CD 파이프라인 구축 과제 - 본인 이름
+     제출 결과물 : CI/CD 과제와 관련된 결과물을 하나의 폴더에 저장해서
+                  폴더 통째로 압축해서 제출
+
+                  파일명은 "CI/CD 파이프라인 구축 과제 - 본인 이름.zip"
+
+                  폴더의 구성은 아래와 같음
+
+                  CICD_pipeline
+                    - src
+                    - test_result
+                    - report
+
+                  1. src 폴더
+                     자바 및 github actions 소스 등
+                  2. test_result 폴더
+                     - workflows 의 job 별로 항목을 구성
+                     - event 발생을 유발하는 trigger 에 대한 화면 캡쳐
+                     - workflows 의 job 별로 event 발생 전후의 실행되는 결과 화면 캡쳐
+                  3. report 폴더
+                     CI/CD pipeline 구조 및 Git Flow 구성과 관련된 문서
+                     - pipeline 구조 및 Git Flow 구성 및 배경에 대한 설명
+                     - 이번 과제를 통해 느낀 점
+                       기술, 학습, 고민 등에 대해 자유롭게 작성.
+
+     첨부 파일 :  CI/CD 파이프라인 구축 과제 - 본인 이름.zip
+     내용 :       작성하지 않아도 됨
